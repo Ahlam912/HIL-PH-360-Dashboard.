@@ -291,18 +291,45 @@ server <- function(input, output, session) {
   })
   
   output$role_donut_chart <- renderPlotly({
-  df <- filtered_data()
-  req(nrow(df) > 0)
-  
-  # Determine if column is named 'Role' or 'role'
-  role_col <- if ("Role" %in% names(df)) "Role" else if ("role" %in% names(df)) "role" else NULL
-  req(!is.null(role_col))
-  
-  role_counts <- df %>%
-    filter(!is.na(.data[[role_col]])) %>%
-    count(Role = .data[[role_col]])
-  
-  req(nrow(role_counts) > 0)
+    # Safely handle both reactive expressions and standard dataframes
+    df <- if (is.function(filtered_data)) filtered_data() else filtered_data
+    
+    req(!is.null(df), nrow(df) > 0)
+    
+    # 1. Find any column matching 'role' (case-insensitive)
+    role_col_name <- names(df)[tolower(names(df)) %in% c("role", "evaluator_role", "relationship")][1]
+    
+    # Fallback if no matching role column is found
+    if (is.na(role_col_name) || is.null(role_col_name)) {
+      return(plot_ly() %>% layout(title = "Role column not found in data"))
+    }
+    
+    # 2. Extract values, drop NAs, and calculate frequency
+    role_vec <- df[[role_col_name]]
+    role_vec <- role_vec[!is.na(role_vec) & role_vec != ""]
+    
+    if (length(role_vec) == 0) {
+      return(plot_ly() %>% layout(title = "No evaluator roles recorded"))
+    }
+    
+    role_counts <- as.data.frame(table(Role = role_vec), stringsAsFactors = FALSE)
+    colnames(role_counts) <- c("Role", "n")
+    
+    # 3. Render Donut Plot
+    plot_ly(
+      role_counts, 
+      labels = ~Role, 
+      values = ~n, 
+      type = 'pie', 
+      hole = 0.5,
+      textinfo = 'label+value',
+      hoverinfo = 'label+percent+value'
+    ) %>%
+      layout(
+        showlegend = TRUE,
+        margin = list(l = 10, r = 10, t = 10, b = 10)
+      )
+  })
   
   plot_ly(
     role_counts, 
