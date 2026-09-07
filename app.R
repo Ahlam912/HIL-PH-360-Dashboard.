@@ -291,10 +291,33 @@ server <- function(input, output, session) {
   })
   
   output$role_donut_chart <- renderPlotly({
-    df <- filtered_data()
-    req(nrow(df) > 0)
-    plot_ly(df %>% count(Role), labels = ~Role, values = ~n, type = 'pie', hole = 0.5)
-  })
+  df <- filtered_data()
+  req(nrow(df) > 0)
+  
+  # Determine if column is named 'Role' or 'role'
+  role_col <- if ("Role" %in% names(df)) "Role" else if ("role" %in% names(df)) "role" else NULL
+  req(!is.null(role_col))
+  
+  role_counts <- df %>%
+    filter(!is.na(.data[[role_col]])) %>%
+    count(Role = .data[[role_col]])
+  
+  req(nrow(role_counts) > 0)
+  
+  plot_ly(
+    role_counts, 
+    labels = ~Role, 
+    values = ~n, 
+    type = 'pie', 
+    hole = 0.5,
+    textinfo = 'label+value',
+    hoverinfo = 'label+percent+value'
+  ) %>%
+  layout(
+    showlegend = TRUE,
+    margin = list(l = 10, r = 10, t = 10, b = 10)
+  )
+})
   
   output$gap_bar_chart <- renderPlotly({
     df <- competency_scores()
