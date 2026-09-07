@@ -14,7 +14,7 @@ library(emayili)
 # 1. CONFIGURATION - KOBO TOOLBOX API
 # ==========================================
 KOBO_SERVER   <- "https://kf.kobotoolbox.org"
-KOBO_TOKEN    <- "077498203bf12413fcf19988ee29aea5dfeeffeb"
+KOBO_TOKEN    <- Sys.getenv("KOBO_TOKEN")
 KOBO_ASSET_ID <- "aDp97W9BbuVn9tASh7wdSM"
 
 competency_names <- c(
