@@ -291,31 +291,24 @@ server <- function(input, output, session) {
   })
   
   output$role_donut_chart <- renderPlotly({
-    # Safely handle both reactive expressions and standard dataframes
+    # Extract dataframe safely whether filtered_data is reactive or static
     df <- if (is.function(filtered_data)) filtered_data() else filtered_data
     
     req(!is.null(df), nrow(df) > 0)
     
-    # 1. Find any column matching 'role' (case-insensitive)
-    role_col_name <- names(df)[tolower(names(df)) %in% c("role", "evaluator_role", "relationship")][1]
+    # Detect role column casing variations
+    role_cols <- names(df)[tolower(names(df)) %in% c("role", "evaluator_role", "relationship")]
+    req(length(role_cols) > 0)
+    role_col_name <- role_cols[1]
     
-    # Fallback if no matching role column is found
-    if (is.na(role_col_name) || is.null(role_col_name)) {
-      return(plot_ly() %>% layout(title = "Role column not found in data"))
-    }
-    
-    # 2. Extract values, drop NAs, and calculate frequency
+    # Clean values and compute counts
     role_vec <- df[[role_col_name]]
     role_vec <- role_vec[!is.na(role_vec) & role_vec != ""]
-    
-    if (length(role_vec) == 0) {
-      return(plot_ly() %>% layout(title = "No evaluator roles recorded"))
-    }
+    req(length(role_vec) > 0)
     
     role_counts <- as.data.frame(table(Role = role_vec), stringsAsFactors = FALSE)
     colnames(role_counts) <- c("Role", "n")
     
-    # 3. Render Donut Plot
     plot_ly(
       role_counts, 
       labels = ~Role, 
@@ -330,21 +323,7 @@ server <- function(input, output, session) {
         margin = list(l = 10, r = 10, t = 10, b = 10)
       )
   })
-  
-  plot_ly(
-    role_counts, 
-    labels = ~Role, 
-    values = ~n, 
-    type = 'pie', 
-    hole = 0.5,
-    textinfo = 'label+value',
-    hoverinfo = 'label+percent+value'
-  ) %>%
-  layout(
-    showlegend = TRUE,
-    margin = list(l = 10, r = 10, t = 10, b = 10)
-  )
-})
+
   
   output$gap_bar_chart <- renderPlotly({
     df <- competency_scores()
